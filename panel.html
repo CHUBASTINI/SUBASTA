@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikTok Subasta LIVE — Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --card: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #fe2c55;
+    --accent2: #25f4ee;
+    --gold: #ffd700;
+    --text: #f0f0ff;
+    --muted: #888899;
+    --overlay-color: #fe2c55;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:0; }
+
+  .app { position:relative; z-index:1; display:grid; grid-template-columns:300px 1fr 300px; grid-template-rows:auto 1fr; gap:14px; padding:14px; min-height:100vh; }
+
+  header { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; padding:12px 20px; background:var(--surface); border:1px solid var(--border); border-radius:12px; }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo-icon { width:34px; height:34px; background:var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:17px; }
+  .logo-text { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:2px; background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .status-badge { display:flex; align-items:center; gap:8px; padding:6px 14px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; background:#1e1e2e; border:1px solid var(--border); }
+  .status-dot { width:8px; height:8px; border-radius:50%; background:var(--muted); transition:all .3s; }
+  .status-dot.live { background:var(--accent); box-shadow:0 0 8px var(--accent); animation:pulse 1.5s infinite; }
+  .status-dot.ready { background:#22c55e; box-shadow:0 0 8px #22c55e; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+  /* URL box */
+  .url-box { display:flex; align-items:center; gap:8px; background:rgba(37,244,238,0.08); border:1px solid rgba(37,244,238,0.3); border-radius:8px; padding:8px 12px; flex:1; margin:0 16px; }
+  .url-label { font-size:10px; font-weight:700; letter-spacing:1.5px; color:var(--accent2); text-transform:uppercase; white-space:nowrap; }
+  .url-input { background:none; border:none; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:12px; flex:1; outline:none; min-width:0; }
+  .url-copy { background:var(--accent2); color:#0a0a0f; border:none; border-radius:6px; padding:5px 12px; font-weight:800; font-size:11px; cursor:pointer; white-space:nowrap; font-family:'Syne',sans-serif; letter-spacing:.5px; }
+  .url-copy:hover { opacity:.85; }
+
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; }
+  .panel-title { font-family:'Bebas Neue',sans-serif; font-size:12px; letter-spacing:3px; color:var(--muted); margin-bottom:14px; text-transform:uppercase; }
+
+  .config-panel { display:flex; flex-direction:column; gap:12px; }
+  .field { display:flex; flex-direction:column; gap:5px; }
+  label { font-size:10px; font-weight:700; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; }
+  input[type=number], input[type=text], select { background:var(--card); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:14px; padding:9px 11px; outline:none; transition:border-color .2s; width:100%; }
+  input:focus, select:focus { border-color:var(--accent2); }
+  .input-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:9px 11px; background:var(--card); border-radius:8px; border:1px solid var(--border); }
+  .toggle-label { font-size:12px; font-weight:700; }
+  .toggle { position:relative; width:40px; height:22px; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; inset:0; background:#333; border-radius:22px; cursor:pointer; transition:.3s; }
+  .slider::before { content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:white; border-radius:50%; transition:.3s; }
+  input:checked + .slider { background:var(--accent2); }
+  input:checked + .slider::before { transform:translateX(18px); }
+  .color-row { display:flex; align-items:center; gap:10px; padding:8px 11px; background:var(--card); border-radius:8px; border:1px solid var(--border); }
+  input[type=color] { width:34px; height:34px; border:none; border-radius:6px; cursor:pointer; padding:0; background:none; }
+  .color-label { font-size:12px; font-weight:700; flex:1; }
+  .color-hex { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); }
+
+  /* Overlay preview */
+  .overlay-preview-wrap { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px; }
+  .ov-inner { background:var(--overlay-color); border-radius:6px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; }
+  .ov-lbl { font-size:9px; font-family:'JetBrains Mono',monospace; font-weight:700; letter-spacing:2px; color:rgba(255,255,255,.6); text-transform:uppercase; }
+  .ov-time { font-family:'Bebas Neue',sans-serif; font-size:30px; color:white; line-height:1; letter-spacing:2px; }
+  .ov-name { font-family:'Bebas Neue',sans-serif; font-size:18px; color:white; letter-spacing:1px; text-align:right; }
+  .ov-coins { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:#ffd700; text-align:right; }
+
+  .center-panel { display:flex; flex-direction:column; gap:14px; }
+
+  .timer-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:28px 18px; text-align:center; position:relative; overflow:hidden; }
+  .timer-card::after { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 0%,rgba(254,44,85,.08) 0%,transparent 70%); pointer-events:none; }
+  .timer-display { font-family:'Bebas Neue',sans-serif; font-size:100px; line-height:1; letter-spacing:4px; transition:color .3s; position:relative; z-index:1; }
+  .timer-display.warning { color:#f97316; }
+  .timer-display.danger { color:var(--accent); text-shadow:0 0 30px rgba(254,44,85,.5); }
+  .timer-display.snide { color:var(--accent2); text-shadow:0 0 30px rgba(37,244,238,.5); }
+  .timer-label { font-size:10px; letter-spacing:4px; color:var(--muted); text-transform:uppercase; margin-top:4px; position:relative; z-index:1; }
+  .progress-wrap { height:4px; background:var(--card); border-radius:2px; overflow:hidden; margin-top:14px; position:relative; z-index:1; }
+  .progress-bar { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:2px; transition:width 1s linear; }
+  .controls { display:flex; gap:8px; margin-top:16px; position:relative; z-index:1; }
+  .btn { flex:1; padding:11px; border-radius:10px; border:none; font-family:'Syne',sans-serif; font-weight:800; font-size:12px; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; transition:all .2s; }
+  .btn:hover { transform:translateY(-2px); }
+  .btn:active { transform:translateY(0); }
+  .btn-primary { background:var(--accent); color:white; box-shadow:0 4px 20px rgba(254,44,85,.3); }
+  .btn-secondary { background:var(--card); color:var(--text); border:1px solid var(--border); }
+  .btn-cyan { background:var(--accent2); color:#0a0a0f; box-shadow:0 4px 20px rgba(37,244,238,.2); }
+  .btn-gold { background:var(--gold); color:#0a0a0f; }
+  .btn-sm { padding:7px 12px; font-size:10px; border-radius:7px; flex:unset; }
+  .quick-add { display:flex; gap:6px; align-items:center; justify-content:center; margin-top:8px; position:relative; z-index:1; flex-wrap:wrap; }
+  .quick-add span { font-size:10px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; }
+
+  .bids-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; flex:1; }
+  .bids-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .live-count { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent2); background:rgba(37,244,238,.1); padding:3px 10px; border-radius:20px; border:1px solid rgba(37,244,238,.2); }
+  .bids-list { list-style:none; display:flex; flex-direction:column; gap:5px; max-height:220px; overflow-y:auto; }
+  .bids-list::-webkit-scrollbar { width:3px; }
+  .bids-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  .bid-item { display:flex; align-items:center; gap:9px; padding:9px 11px; background:var(--card); border-radius:8px; border:1px solid transparent; animation:slideIn .3s ease; transition:border-color .3s; }
+  .bid-item:first-child { border-color:var(--gold); background:rgba(255,215,0,.05); }
+  @keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+  .bid-rank { font-family:'Bebas Neue',sans-serif; font-size:17px; width:22px; text-align:center; color:var(--muted); }
+  .bid-item:first-child .bid-rank { color:var(--gold); }
+  .bid-avatar { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; flex-shrink:0; }
+  .bid-user { flex:1; }
+  .bid-name { font-size:13px; font-weight:700; }
+  .bid-time { font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+  .bid-tokens { display:flex; align-items:center; gap:3px; font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; color:var(--gold); }
+
+  .right-panel { display:flex; flex-direction:column; gap:12px; }
+  .manual-form { display:flex; flex-direction:column; gap:9px; }
+  .top-bidder-display { padding:14px; background:linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,215,0,.03)); border:1px solid rgba(255,215,0,.3); border-radius:12px; text-align:center; }
+  .top-bidder-label { font-size:9px; letter-spacing:2px; color:var(--gold); text-transform:uppercase; font-weight:700; margin-bottom:5px; }
+  .top-bidder-name { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; line-height:1; }
+  .top-bidder-tokens { font-family:'JetBrains Mono',monospace; font-size:16px; color:var(--gold); margin-top:3px; }
+  .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .stat-box { padding:12px; background:var(--card); border-radius:10px; border:1px solid var(--border); text-align:center; }
+  .stat-value { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; }
+  .stat-label { font-size:9px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-top:1px; }
+
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); backdrop-filter:blur(8px); z-index:1000; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .4s; }
+  .modal-overlay.show { opacity:1; pointer-events:all; }
+  .winner-card { background:var(--surface); border:1px solid var(--gold); border-radius:24px; padding:44px 52px; text-align:center; position:relative; overflow:hidden; max-width:440px; width:90%; box-shadow:0 0 80px rgba(255,215,0,.15); animation:popIn .5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes popIn { from{transform:scale(.7);opacity:0} to{transform:scale(1);opacity:1} }
+  .winner-card::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 0%,rgba(255,215,0,.12) 0%,transparent 60%); }
+  .confetti { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .confetti-piece { position:absolute; width:8px; height:8px; top:-10px; animation:fall linear forwards; border-radius:1px; }
+  @keyframes fall { to{transform:translateY(600px) rotate(720deg);opacity:0} }
+  .winner-trophy { font-size:60px; display:block; margin-bottom:10px; position:relative; z-index:1; }
+  .winner-title { font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:6px; color:var(--gold); text-transform:uppercase; position:relative; z-index:1; margin-bottom:6px; }
+  .winner-name { font-family:'Bebas Neue',sans-serif; font-size:48px; letter-spacing:3px; line-height:1; position:relative; z-index:1; }
+  .winner-tokens { font-family:'JetBrains Mono',monospace; font-size:22px; color:var(--gold); margin-top:6px; position:relative; z-index:1; }
+  .winner-actions { display:flex; gap:10px; margin-top:24px; position:relative; z-index:1; }
+
+  .snide-overlay { display:none; position:fixed; inset:0; border:3px solid var(--accent2); pointer-events:none; z-index:500; animation:snidePulse 1s infinite; }
+  .snide-overlay.show { display:block; }
+  @keyframes snidePulse { 0%,100%{opacity:1}50%{opacity:.3} }
+</style>
+</head>
+<body>
+
+<div class="snide-overlay" id="snideOverlay"></div>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🎵</div>
+      <span class="logo-text">TikTok Subasta</span>
+    </div>
+
+    <!-- URL DEL OVERLAY -->
+    <div class="url-box">
+      <span class="url-label">🎬 URL Overlay</span>
+      <input type="text" class="url-input" id="overlayUrlDisplay" readonly value="← Configura tu URL de GitHub Pages aquí abajo">
+      <button class="url-copy" onclick="copyOverlayUrl()">Copiar</button>
+    </div>
+
+    <div class="status-badge">
+      <div class="status-dot ready" id="statusDot"></div>
+      <span id="statusText">Listo</span>
+    </div>
+  </header>
+
+  <!-- LEFT CONFIG -->
+  <div class="config-panel panel">
+    <div class="panel-title">⚙ Configuración</div>
+
+    <!-- URL DE GITHUB PAGES -->
+    <div class="field">
+      <label>🌐 URL de tu overlay.html (GitHub Pages)</label>
+      <input type="text" id="githubUrl" placeholder="https://tuusuario.github.io/subasta/overlay.html" oninput="updateOverlayUrl()">
+      <span style="font-size:10px;color:var(--muted);margin-top:3px;">Pega aquí la URL después de subir overlay.html a GitHub Pages</span>
+    </div>
+
+    <div class="field">
+      <label>Duración del Temporizador</label>
+      <div class="input-row">
+        <div><label>Minutos</label><input type="number" id="cfgMin" value="3" min="0" max="60"></div>
+        <div><label>Segundos</label><input type="number" id="cfgSec" value="0" min="0" max="59"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Tiempo Snide / Delay (segundos)</label>
+      <input type="number" id="cfgSnide" value="30" min="0" max="300">
+    </div>
+
+    <div class="field">
+      <label>Tokens mínimos para participar</label>
+      <input type="number" id="cfgMinTokens" value="1" min="1">
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Empates habilitados</span>
+      <label class="toggle"><input type="checkbox" id="cfgTies" checked><span class="slider"></span></label>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Mostrar tokens en overlay</span>
+      <label class="toggle"><input type="checkbox" id="cfgShowTokens" checked><span class="slider"></span></label>
+    </div>
+
+    <div class="color-row">
+      <input type="color" id="cfgOverlayColor" value="#fe2c55" oninput="updateOverlayColor(this.value)">
+      <span class="color-label">Color Overlay</span>
+      <span class="color-hex" id="colorHex">#fe2c55</span>
+    </div>
+
+    <div class="overlay-preview-wrap">
+      <div class="panel-title" style="margin-bottom:8px">Vista Previa</div>
+      <div class="ov-inner" id="ovInner">
+        <div>
+          <div class="ov-lbl">⏱ Tiempo</div>
+          <div class="ov-time" id="ovTime">3:00</div>
+        </div>
+        <div>
+          <div class="ov-lbl">🏆 Líder</div>
+          <div class="ov-name" id="ovName">—</div>
+          <div class="ov-coins" id="ovCoins">🪙 0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="center-panel">
+    <div class="timer-card">
+      <div class="timer-display" id="timerDisplay">3:00</div>
+      <div class="timer-label" id="timerLabel">TIEMPO RESTANTE</div>
+      <div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:100%"></div></div>
+      <div class="controls">
+        <button class="btn btn-primary" id="btnStart" onclick="startTimer()">▶ INICIAR</button>
+        <button class="btn btn-secondary" id="btnPause" onclick="pauseTimer()" disabled>⏸ PAUSAR</button>
+        <button class="btn btn-secondary btn-sm" onclick="resetTimer()">↺ RESET</button>
+      </div>
+      <div class="quick-add">
+        <span>+ Tiempo:</span>
+        <button class="btn btn-secondary btn-sm" onclick="addTime(10)">+10s</button>
+        <button class="btn btn-secondary btn-sm" onclick="addTime(30)">+30s</button>
+        <button class="btn btn-secondary btn-sm" onclick="addTime(60)">+1m</button>
+        <button class="btn btn-secondary btn-sm" onclick="addTime(120)">+2m</button>
+      </div>
+    </div>
+
+    <div class="bids-card">
+      <div class="bids-header">
+        <div class="panel-title" style="margin:0">🪙 Clasificación</div>
+        <div class="live-count" id="liveCount">0 participantes</div>
+      </div>
+      <ul class="bids-list" id="bidsList">
+        <li style="padding:18px;text-align:center;color:var(--muted);font-size:12px;">Sin pujas aún.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-panel">
+    <div class="panel">
+      <div class="panel-title">🏆 Líder Actual</div>
+      <div class="top-bidder-display">
+        <div class="top-bidder-label">Ganando</div>
+        <div class="top-bidder-name" id="topBidderName">—</div>
+        <div class="top-bidder-tokens" id="topBidderTokens">🪙 0 tokens</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📊 Stats</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-value" id="statParticipants">0</div><div class="stat-label">Jugadores</div></div>
+        <div class="stat-box"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total</div></div>
+        <div class="stat-box"><div class="stat-value" id="statAvg">0</div><div class="stat-label">Promedio</div></div>
+        <div class="stat-box"><div class="stat-value" id="statHighest">0</div><div class="stat-label">Máximo</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">➕ Añadir Puja Manual</div>
+      <div class="manual-form">
+        <div class="field"><label>Usuario TikTok</label><input type="text" id="inputUser" placeholder="@usuario" maxlength="30"></div>
+        <div class="field"><label>Tokens</label><input type="number" id="inputTokens" placeholder="0" min="1"></div>
+        <button class="btn btn-cyan" onclick="addBid()">Agregar Puja</button>
+        <button class="btn btn-secondary" onclick="clearBids()">Limpiar Todo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WINNER MODAL -->
+<div class="modal-overlay" id="winnerModal">
+  <div class="winner-card">
+    <div class="confetti" id="confettiContainer"></div>
+    <span class="winner-trophy">🏆</span>
+    <div class="winner-title">¡Ganador de la Subasta!</div>
+    <div class="winner-name" id="winnerName">—</div>
+    <div class="winner-tokens" id="winnerTokens">🪙 0 tokens</div>
+    <div class="winner-actions">
+      <button class="btn btn-gold" onclick="closeWinner()">Nueva Subasta</button>
+      <button class="btn btn-secondary" onclick="closeWinnerOnly()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── BroadcastChannel para comunicarse con overlay.html ─────
+const bc = new BroadcastChannel('subasta_overlay');
+
+function broadcastState() {
+  const leader = bids[0] || { user: '—', tokens: 0 };
+  const showTokens = document.getElementById('cfgShowTokens').checked;
+  const color = document.getElementById('cfgOverlayColor').value;
+  bc.postMessage({
+    timer: document.getElementById('timerDisplay').textContent,
+    leader: leader.user !== '—' ? '@' + leader.user : '—',
+    tokens: leader.tokens,
+    snide: isSnide,
+    color: color,
+    show_tokens: showTokens
+  });
+  // También actualiza la URL del overlay con los parámetros actuales
+  updateOverlayUrl();
+}
+
+// ── URL del overlay ────────────────────────────────────────
+function updateOverlayUrl() {
+  const base = document.getElementById('githubUrl').value.trim();
+  if (!base) {
+    document.getElementById('overlayUrlDisplay').value = '← Ingresa tu URL de GitHub Pages en Configuración';
+    return;
+  }
+  const leader = bids[0] || { user: '—', tokens: 0 };
+  const showTokens = document.getElementById('cfgShowTokens').checked;
+  const color = document.getElementById('cfgOverlayColor').value;
+  const timer = document.getElementById('timerDisplay').textContent;
+
+  const params = new URLSearchParams({
+    timer,
+    leader: leader.user !== '—' ? '@' + leader.user : '—',
+    tokens: leader.tokens,
+    color,
+    show_tokens: showTokens,
+    snide: isSnide
+  });
+  const fullUrl = `${base}?${params.toString()}`;
+  document.getElementById('overlayUrlDisplay').value = fullUrl;
+}
+
+function copyOverlayUrl() {
+  const val = document.getElementById('overlayUrlDisplay').value;
+  if (val.startsWith('←')) return;
+  navigator.clipboard.writeText(val).then(() => {
+    const btn = document.querySelector('.url-copy');
+    btn.textContent = '✓ Copiado';
+    btn.style.background = '#22c55e';
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.style.background = ''; }, 2000);
+  });
+}
+
+// ── STATE ──────────────────────────────────────────────────
+let timerInterval = null, snideInterval = null;
+let totalSeconds = 0, currentSeconds = 0, snideSeconds = 0;
+let isRunning = false, isPaused = false, isSnide = false, auctionStarted = false;
+let bids = [];
+
+const avatarColors = ['#fe2c55','#25f4ee','#ffd700','#a855f7','#22c55e','#f97316','#3b82f6','#ec4899'];
+function getColor(i) { return avatarColors[i % avatarColors.length]; }
+function initials(n) { return n.replace('@','').substring(0,2).toUpperCase(); }
+
+// ── TIMER ──────────────────────────────────────────────────
+function getConfig() {
+  return {
+    min: parseInt(document.getElementById('cfgMin').value)||0,
+    sec: parseInt(document.getElementById('cfgSec').value)||0,
+    snide: parseInt(document.getElementById('cfgSnide').value)||30
+  };
+}
+
+function resetTimer() {
+  clearInterval(timerInterval); clearInterval(snideInterval);
+  isRunning=false; isPaused=false; isSnide=false; auctionStarted=false;
+  const cfg = getConfig();
+  totalSeconds = cfg.min*60+cfg.sec;
+  currentSeconds = totalSeconds;
+  snideSeconds = cfg.snide;
+  updateTimerDisplay(currentSeconds);
+  updateProgressBar(currentSeconds, totalSeconds);
+  document.getElementById('snideOverlay').classList.remove('show');
+  document.getElementById('timerLabel').textContent = 'TIEMPO RESTANTE';
+  setTimerClass('');
+  document.getElementById('btnStart').disabled=false;
+  document.getElementById('btnStart').textContent='▶ INICIAR';
+  document.getElementById('btnPause').disabled=true;
+  setStatus('ready');
+  broadcastState();
+}
+
+function startTimer() {
+  if (isRunning && !isPaused) return;
+  const cfg = getConfig();
+  if (!auctionStarted) {
+    totalSeconds = cfg.min*60+cfg.sec;
+    currentSeconds = totalSeconds;
+    snideSeconds = cfg.snide;
+    auctionStarted = true;
+  }
+  isRunning=true; isPaused=false;
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('btnPause').disabled=false;
+  setStatus('live');
+
+  timerInterval = setInterval(() => {
+    if (!isSnide) {
+      currentSeconds--;
+      updateTimerDisplay(currentSeconds);
+      updateProgressBar(currentSeconds, totalSeconds);
+      broadcastState();
+      if (currentSeconds<=10 && currentSeconds>5) setTimerClass('warning');
+      else if (currentSeconds<=5 && currentSeconds>0) setTimerClass('danger');
+      else if (currentSeconds<=0) { clearInterval(timerInterval); startSnide(); }
+    }
+  }, 1000);
+}
+
+function pauseTimer() {
+  if (!isRunning || isSnide) return;
+  if (!isPaused) {
+    clearInterval(timerInterval);
+    isPaused=true;
+    document.getElementById('btnPause').textContent='▶ REANUDAR';
+    document.getElementById('btnStart').disabled=false;
+    setStatus('paused');
+  }
+}
+
+function startSnide() {
+  const cfg = getConfig();
+  snideSeconds = cfg.snide;
+  isSnide=true;
+  document.getElementById('timerLabel').textContent='⚡ SNIDE / DELAY';
+  setTimerClass('snide');
+  document.getElementById('snideOverlay').classList.add('show');
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('btnPause').disabled=true;
+  setStatus('snide');
+  broadcastState();
+
+  snideInterval = setInterval(() => {
+    snideSeconds--;
+    updateTimerDisplay(snideSeconds);
+    updateProgressBar(snideSeconds, cfg.snide);
+    broadcastState();
+    if (snideSeconds<=0) {
+      clearInterval(snideInterval);
+      document.getElementById('snideOverlay').classList.remove('show');
+      showWinner();
+    }
+  }, 1000);
+}
+
+function addTime(secs) {
+  if (isSnide) { snideSeconds+=secs; }
+  else { currentSeconds+=secs; totalSeconds+=secs; updateTimerDisplay(currentSeconds); updateProgressBar(currentSeconds, totalSeconds); broadcastState(); }
+}
+
+function updateTimerDisplay(secs) {
+  const s=Math.max(0,secs), m=Math.floor(s/60), r=s%60;
+  const str=`${m}:${String(r).padStart(2,'0')}`;
+  document.getElementById('timerDisplay').textContent=str;
+  document.getElementById('ovTime').textContent=str;
+}
+
+function updateProgressBar(cur, tot) {
+  document.getElementById('progressBar').style.width = (tot>0 ? Math.max(0,(cur/tot)*100) : 0)+'%';
+}
+
+function setTimerClass(cls) {
+  document.getElementById('timerDisplay').className='timer-display'+(cls?' '+cls:'');
+}
+
+function setStatus(state) {
+  const dot=document.getElementById('statusDot'), txt=document.getElementById('statusText');
+  dot.className='status-dot';
+  if (state==='live') { dot.classList.add('live'); txt.textContent='EN VIVO'; }
+  else if (state==='paused') { txt.textContent='PAUSADO'; }
+  else if (state==='snide') { dot.classList.add('live'); txt.textContent='SNIDE'; }
+  else { dot.classList.add('ready'); txt.textContent='Listo'; }
+}
+
+// ── BIDS ──────────────────────────────────────────────────
+function addBid() {
+  const user=document.getElementById('inputUser').value.trim().replace('@','');
+  const tokens=parseInt(document.getElementById('inputTokens').value);
+  if (!user||!tokens||tokens<1) { document.getElementById('inputUser').style.borderColor='var(--accent)'; setTimeout(()=>document.getElementById('inputUser').style.borderColor='',600); return; }
+  const minT=parseInt(document.getElementById('cfgMinTokens').value)||1;
+  if (tokens<minT) { alert(`Mínimo ${minT} tokens.`); return; }
+  const existing=bids.findIndex(b=>b.user.toLowerCase()===user.toLowerCase());
+  if (existing>=0) bids[existing].tokens+=tokens;
+  else bids.push({user, tokens, color:getColor(bids.length), time:new Date().toLocaleTimeString()});
+  bids.sort((a,b)=>b.tokens-a.tokens);
+  renderBids(); updateStats(); updateTopBidder(); broadcastState();
+  document.getElementById('inputUser').value='';
+  document.getElementById('inputTokens').value='';
+  document.getElementById('inputUser').focus();
+}
+
+function clearBids() {
+  if (!confirm('¿Eliminar todas las pujas?')) return;
+  bids=[]; renderBids(); updateStats(); updateTopBidder(); broadcastState();
+}
+
+function renderBids() {
+  const list=document.getElementById('bidsList');
+  const showTokens=document.getElementById('cfgShowTokens').checked;
+  const allowTies=document.getElementById('cfgTies').checked;
+  if (bids.length===0) {
+    list.innerHTML='<li style="padding:18px;text-align:center;color:var(--muted);font-size:12px;">Sin pujas aún.</li>';
+    document.getElementById('liveCount').textContent='0 participantes';
+    document.getElementById('ovName').textContent='—';
+    document.getElementById('ovCoins').textContent='🪙 0';
+    return;
+  }
+  let ranked=[...bids];
+  if (!allowTies && ranked.length>1) ranked=[ranked[0]];
+  list.innerHTML=ranked.map((b,i)=>`
+    <li class="bid-item">
+      <span class="bid-rank">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</span>
+      <div class="bid-avatar" style="background:${b.color}20;color:${b.color};border:1.5px solid ${b.color}50">${initials(b.user)}</div>
+      <div class="bid-user"><div class="bid-name">@${b.user}</div><div class="bid-time">${b.time}</div></div>
+      ${showTokens?`<div class="bid-tokens">🪙 ${b.tokens.toLocaleString()}</div>`:''}
+    </li>`).join('');
+  document.getElementById('liveCount').textContent=`${bids.length} participante${bids.length!==1?'s':''}`;
+  const top=bids[0];
+  document.getElementById('ovName').textContent='@'+top.user;
+  document.getElementById('ovCoins').textContent='🪙 '+top.tokens.toLocaleString();
+}
+
+function updateStats() {
+  const total=bids.reduce((s,b)=>s+b.tokens,0);
+  const avg=bids.length?Math.round(total/bids.length):0;
+  const max=bids.length?Math.max(...bids.map(b=>b.tokens)):0;
+  document.getElementById('statParticipants').textContent=bids.length;
+  document.getElementById('statTotal').textContent=total.toLocaleString();
+  document.getElementById('statAvg').textContent=avg.toLocaleString();
+  document.getElementById('statHighest').textContent=max.toLocaleString();
+}
+
+function updateTopBidder() {
+  if (bids.length===0) { document.getElementById('topBidderName').textContent='—'; document.getElementById('topBidderTokens').textContent='🪙 0 tokens'; return; }
+  const top=bids[0];
+  document.getElementById('topBidderName').textContent='@'+top.user;
+  document.getElementById('topBidderTokens').textContent='🪙 '+top.tokens.toLocaleString()+' tokens';
+}
+
+// ── WINNER ────────────────────────────────────────────────
+function showWinner() {
+  const modal=document.getElementById('winnerModal');
+  if (bids.length===0) { document.getElementById('winnerName').textContent='Sin participantes'; document.getElementById('winnerTokens').textContent=''; modal.classList.add('show'); return; }
+  const w=bids[0];
+  document.getElementById('winnerName').textContent='@'+w.user;
+  document.getElementById('winnerTokens').textContent='🪙 '+w.tokens.toLocaleString()+' tokens';
+  modal.classList.add('show');
+  spawnConfetti();
+}
+
+function closeWinner() {
+  document.getElementById('winnerModal').classList.remove('show');
+  bids=[]; renderBids(); updateStats(); updateTopBidder(); resetTimer();
+}
+function closeWinnerOnly() { document.getElementById('winnerModal').classList.remove('show'); }
+
+function spawnConfetti() {
+  const c=document.getElementById('confettiContainer'); c.innerHTML='';
+  const cols=['#ffd700','#fe2c55','#25f4ee','#a855f7','#22c55e','#f97316'];
+  for(let i=0;i<60;i++){
+    const p=document.createElement('div'); p.className='confetti-piece';
+    p.style.left=Math.random()*100+'%';
+    p.style.background=cols[Math.floor(Math.random()*cols.length)];
+    p.style.animationDuration=(1.5+Math.random()*2)+'s';
+    p.style.animationDelay=(Math.random()*1)+'s';
+    p.style.borderRadius=Math.random()>.5?'50%':'2px';
+    p.style.width=p.style.height=(5+Math.random()*8)+'px';
+    c.appendChild(p);
+  }
+}
+
+// ── OVERLAY COLOR ─────────────────────────────────────────
+function updateOverlayColor(val) {
+  document.documentElement.style.setProperty('--overlay-color', val);
+  document.getElementById('colorHex').textContent=val;
+  document.getElementById('ovInner').style.background=val;
+  broadcastState();
+}
+
+// ── INIT ──────────────────────────────────────────────────
+document.getElementById('inputTokens').addEventListener('keydown',e=>{if(e.key==='Enter')addBid();});
+document.getElementById('inputUser').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('inputTokens').focus();});
+resetTimer();
+</script>
+</body>
+</html>
