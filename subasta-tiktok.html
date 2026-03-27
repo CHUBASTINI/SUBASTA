@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikTok Subasta LIVE</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --card: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #fe2c55;
+    --accent2: #25f4ee;
+    --gold: #ffd700;
+    --text: #f0f0ff;
+    --muted: #888899;
+    --overlay-color: #fe2c55;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── NOISE TEXTURE ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── LAYOUT ─── */
+  .app {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    grid-template-rows: auto 1fr;
+    gap: 16px;
+    padding: 16px;
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: #1e1e2e;
+    border: 1px solid var(--border);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: all 0.3s;
+  }
+  .status-dot.live { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 1.5s infinite; }
+  .status-dot.ready { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ─── PANEL BASE ─── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+
+  .panel-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+
+  /* ─── LEFT: CONFIG ─── */
+  .config-panel { display: flex; flex-direction: column; gap: 14px; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+
+  label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  input[type=number], input[type=text], select {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--accent2); }
+
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--card);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .toggle-label { font-size: 13px; font-weight: 700; }
+
+  .toggle {
+    position: relative;
+    width: 40px; height: 22px;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0;
+    background: #333;
+    border-radius: 22px;
+    cursor: pointer;
+    transition: .3s;
+  }
+  .slider::before {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    left: 3px; bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: .3s;
+  }
+  input:checked + .slider { background: var(--accent2); }
+  input:checked + .slider::before { transform: translateX(18px); }
+
+  /* Color picker */
+  .color-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    background: var(--card);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  input[type=color] {
+    width: 36px; height: 36px;
+    border: none; border-radius: 6px;
+    cursor: pointer; padding: 0;
+    background: none;
+  }
+  .color-label { font-size: 13px; font-weight: 700; flex: 1; }
+  .color-hex {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ─── CENTER: MAIN ─── */
+  .center-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* BIG TIMER */
+  .timer-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 30px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .timer-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(254,44,85,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .timer-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 110px;
+    line-height: 1;
+    letter-spacing: 4px;
+    transition: color 0.3s;
+    position: relative;
+    z-index: 1;
+  }
+
+  .timer-display.warning { color: #f97316; }
+  .timer-display.danger { color: var(--accent); text-shadow: 0 0 30px rgba(254,44,85,0.5); }
+  .timer-display.snide { color: var(--accent2); text-shadow: 0 0 30px rgba(37,244,238,0.5); }
+
+  .timer-label {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 4px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    height: 4px;
+    background: var(--card);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 16px;
+    position: relative;
+    z-index: 1;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 1s linear;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 4px 20px rgba(254,44,85,0.3);
+  }
+  .btn-secondary {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-cyan {
+    background: var(--accent2);
+    color: #0a0a0f;
+    box-shadow: 0 4px 20px rgba(37,244,238,0.2);
+  }
+  .btn-gold {
+    background: var(--gold);
+    color: #0a0a0f;
+    box-shadow: 0 4px 20px rgba(255,215,0,0.2);
+  }
+  .btn-sm {
+    padding: 8px 14px;
+    font-size: 11px;
+    border-radius: 8px;
+    flex: unset;
+  }
+
+  /* Quick add */
+  .quick-add {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    position: relative;
+    z-index: 1;
+  }
+  .quick-add span { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ─── BIDS TABLE ─── */
+  .bids-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    flex: 1;
+  }
+
+  .bids-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .live-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+    background: rgba(37,244,238,0.1);
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(37,244,238,0.2);
+  }
+
+  .bids-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .bids-list::-webkit-scrollbar { width: 4px; }
+  .bids-list::-webkit-scrollbar-track { background: var(--card); border-radius: 2px; }
+  .bids-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .bid-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--card);
+    border-radius: 8px;
+    border: 1px solid transparent;
+    animation: slideIn 0.3s ease;
+    transition: border-color 0.3s;
+  }
+
+  .bid-item:first-child {
+    border-color: var(--gold);
+    background: rgba(255,215,0,0.05);
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .bid-rank {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .bid-item:first-child .bid-rank { color: var(--gold); }
+
+  .bid-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .bid-user { flex: 1; }
+  .bid-name { font-size: 14px; font-weight: 700; }
+  .bid-time { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+  .bid-tokens {
+    display: flex; align-items: center; gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .token-icon { font-size: 16px; }
+
+  /* ─── RIGHT: MANUAL ADD ─── */
+  .right-panel { display: flex; flex-direction: column; gap: 14px; }
+
+  .manual-form { display: flex; flex-direction: column; gap: 10px; }
+
+  .top-bidder-display {
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.03));
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 12px;
+    text-align: center;
+  }
+  .top-bidder-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .top-bidder-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .top-bidder-tokens {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    color: var(--gold);
+    margin-top: 4px;
+  }
+
+  /* Stats row */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-box {
+    padding: 14px;
+    background: var(--card);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 1px;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* ─── WINNER MODAL ─── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+
+  .winner-card {
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    border-radius: 24px;
+    padding: 48px 56px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 0 80px rgba(255,215,0,0.15), 0 0 200px rgba(255,215,0,0.05);
+    animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .winner-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.12) 0%, transparent 60%);
+  }
+
+  .confetti {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 8px; height: 8px;
+    top: -10px;
+    animation: fall linear forwards;
+    border-radius: 1px;
+  }
+
+  @keyframes fall {
+    to { transform: translateY(600px) rotate(720deg); opacity: 0; }
+  }
+
+  .winner-trophy { font-size: 64px; display: block; margin-bottom: 12px; position: relative; z-index: 1; }
+  .winner-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 6px;
+    color: var(--gold);
+    text-transform: uppercase;
+    position: relative; z-index: 1;
+    margin-bottom: 8px;
+  }
+  .winner-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 3px;
+    line-height: 1;
+    position: relative; z-index: 1;
+  }
+  .winner-tokens {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px;
+    color: var(--gold);
+    margin-top: 8px;
+    position: relative; z-index: 1;
+  }
+  .winner-actions {
+    display: flex; gap: 12px;
+    margin-top: 28px;
+    position: relative; z-index: 1;
+  }
+
+  /* OVERLAY PREVIEW */
+  .overlay-preview-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .overlay-preview {
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: 'Bebas Neue', sans-serif;
+  }
+  .overlay-inner {
+    background: var(--overlay-color);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .overlay-timer { font-size: 28px; letter-spacing: 2px; color: white; line-height: 1; }
+  .overlay-top {
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.75);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .overlay-name { font-size: 18px; color: white; letter-spacing: 1px; }
+  .overlay-coins { font-size: 14px; color: rgba(255,255,255,0.85); font-family: 'JetBrains Mono', monospace; }
+
+  /* SNIDE overlay */
+  .snide-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(37,244,238,0.04);
+    pointer-events: none;
+    z-index: 500;
+    border: 3px solid var(--accent2);
+    border-radius: 0;
+    animation: snidePulse 1s infinite;
+  }
+  .snide-overlay.show { display: block; }
+  @keyframes snidePulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Scrollbar global */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 1fr 1fr; }
+    .config-panel { grid-column: 1; }
+    .center-panel { grid-column: 2; }
+    .right-panel { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3,1fr); }
+  }
+  @media (max-width: 720px) {
+    .app { grid-template-columns: 1fr; }
+    .config-panel, .center-panel, .right-panel { grid-column: 1; }
+    .right-panel { grid-template-columns: 1fr 1fr; }
+    .timer-display { font-size: 70px; }
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
+
+  .ring-effect {
+    animation: ring 0.4s ease;
+  }
+  @keyframes ring {
+    0%,100%{transform:scale(1)} 25%{transform:scale(1.04)} 75%{transform:scale(0.98)}
+  }
+</style>
+</head>
+<body>
+
+<div class="snide-overlay" id="snideOverlay"></div>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🎵</div>
+      <span class="logo-text">TikTok Subasta</span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div class="status-badge">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Listo</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="openOverlayWindow()" title="Abrir overlay en ventana separada">🎬 Overlay</button>
+    </div>
+  </header>
+
+  <!-- LEFT: CONFIG -->
+  <div class="config-panel panel">
+    <div class="panel-title">⚙ Configuración</div>
+
+    <div class="field">
+      <label>Duración del Temporizador</label>
+      <div class="input-row">
+        <div>
+          <label>Minutos</label>
+          <input type="number" id="cfgMin" value="3" min="0" max="60">
+        </div>
+        <div>
+          <label>Segundos</label>
+          <input type="number" id="cfgSec" value="0" min="0" max="59">
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Tiempo Snide / Delay (segundos)</label>
+      <input type="number" id="cfgSnide" value="30" min="0" max="300">
+    </div>
+
+    <div class="field">
+      <label>Tokens mínimos para participar</label>
+      <input type="number" id="cfgMinTokens" value="1" min="1">
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Empates habilitados</span>
+      <label class="toggle">
+        <input type="checkbox" id="cfgTies" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Mostrar tokens en overlay</span>
+      <label class="toggle">
+        <input type="checkbox" id="cfgShowTokens" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="color-row">
+      <input type="color" id="cfgOverlayColor" value="#fe2c55" oninput="updateOverlayColor(this.value)">
+      <span class="color-label">Color Overlay</span>
+      <span class="color-hex" id="colorHex">#fe2c55</span>
+    </div>
+
+    <div class="overlay-preview-wrap">
+      <div class="panel-title" style="margin-bottom:10px">Vista Previa Overlay</div>
+      <div class="overlay-preview">
+        <div class="overlay-inner" id="overlayInner">
+          <div>
+            <div class="overlay-top">⏱ Tiempo</div>
+            <div class="overlay-timer" id="overlayTimer">3:00</div>
+          </div>
+          <div style="text-align:right">
+            <div class="overlay-top">🏆 Líder</div>
+            <div class="overlay-name" id="overlayName">—</div>
+            <div class="overlay-coins" id="overlayCoins">🪙 0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="center-panel">
+
+    <div class="timer-card">
+      <div class="timer-display" id="timerDisplay">3:00</div>
+      <div class="timer-label" id="timerLabel">TIEMPO RESTANTE</div>
+      <div class="progress-wrap">
+        <div class="progress-bar" id="progressBar" style="width:100%"></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="btnStart" onclick="startTimer()">▶ INICIAR</button>
+        <button class="btn btn-secondary" id="btnPause" onclick="pauseTimer()" disabled>⏸ PAUSAR</button>
+        <button class="btn btn-secondary btn-sm" onclick="resetTimer()">↺ RESET</button>
+      </div>
+
+      <div class="quick-add">
+        <span>+ Tiempo:</span>
+        <button class="btn btn-secondary btn-sm" onclick="addTime(10)">+10s</button>
+        <button class="btn btn-secondary btn-sm" onclick="addTime(30)">+30s</button>
+        <button class="btn btn-secondary btn-sm" onclick="addTime(60)">+1m</button>
+        <button class="btn btn-secondary btn-sm" onclick="addTime(120)">+2m</button>
+      </div>
+    </div>
+
+    <div class="bids-card">
+      <div class="bids-header">
+        <div class="panel-title" style="margin:0">🪙 Clasificación de Pujas</div>
+        <div class="live-count" id="liveCount">0 participantes</div>
+      </div>
+      <ul class="bids-list" id="bidsList">
+        <li style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">
+          Sin pujas aún. ¡Inicia la subasta!
+        </li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-panel">
+
+    <div class="panel">
+      <div class="panel-title">🏆 Líder Actual</div>
+      <div class="top-bidder-display">
+        <div class="top-bidder-label">Ganando</div>
+        <div class="top-bidder-name" id="topBidderName">—</div>
+        <div class="top-bidder-tokens" id="topBidderTokens">🪙 0 tokens</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📊 Estadísticas</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value" id="statParticipants">0</div>
+          <div class="stat-label">Participantes</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Total Tokens</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="statAvg">0</div>
+          <div class="stat-label">Promedio</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="statHighest">0</div>
+          <div class="stat-label">Máximo</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">➕ Añadir Puja Manual</div>
+      <div class="manual-form">
+        <div class="field">
+          <label>Usuario TikTok</label>
+          <input type="text" id="inputUser" placeholder="@usuario" maxlength="30">
+        </div>
+        <div class="field">
+          <label>Cantidad de Tokens</label>
+          <input type="number" id="inputTokens" placeholder="0" min="1">
+        </div>
+        <button class="btn btn-cyan" onclick="addBid()">Agregar Puja</button>
+        <button class="btn btn-secondary" onclick="clearBids()">Limpiar Todo</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- WINNER MODAL -->
+<div class="modal-overlay" id="winnerModal">
+  <div class="winner-card">
+    <div class="confetti" id="confettiContainer"></div>
+    <span class="winner-trophy">🏆</span>
+    <div class="winner-title">¡Ganador de la Subasta!</div>
+    <div class="winner-name" id="winnerName">—</div>
+    <div class="winner-tokens" id="winnerTokens">🪙 0 tokens</div>
+    <div class="winner-actions">
+      <button class="btn btn-gold" onclick="closeWinner()">Nueva Subasta</button>
+      <button class="btn btn-secondary" onclick="closeWinnerOnly()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let timerInterval = null;
+let snideInterval = null;
+let totalSeconds = 0;
+let currentSeconds = 0;
+let snideSeconds = 0;
+let isRunning = false;
+let isPaused = false;
+let isSnide = false;
+let bids = []; // [{user, tokens, color, time}]
+let auctionStarted = false;
+
+// ─── COLORS for avatars ───────────────────────────────────
+const avatarColors = [
+  '#fe2c55','#25f4ee','#ffd700','#a855f7','#22c55e',
+  '#f97316','#3b82f6','#ec4899','#14b8a6','#f43f5e'
+];
+
+function getColor(i) { return avatarColors[i % avatarColors.length]; }
+
+function initials(name) {
+  name = name.replace('@','');
+  return name.substring(0,2).toUpperCase();
+}
+
+// ─── TIMER ────────────────────────────────────────────────
+function getConfig() {
+  return {
+    min: parseInt(document.getElementById('cfgMin').value)||0,
+    sec: parseInt(document.getElementById('cfgSec').value)||0,
+    snide: parseInt(document.getElementById('cfgSnide').value)||30,
+  };
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  clearInterval(snideInterval);
+  isRunning = false; isPaused = false; isSnide = false; auctionStarted = false;
+  const cfg = getConfig();
+  totalSeconds = cfg.min * 60 + cfg.sec;
+  currentSeconds = totalSeconds;
+  snideSeconds = cfg.snide;
+  updateTimerDisplay(currentSeconds);
+  updateProgressBar(currentSeconds, totalSeconds);
+  document.getElementById('snideOverlay').classList.remove('show');
+  document.getElementById('timerLabel').textContent = 'TIEMPO RESTANTE';
+  setTimerClass('');
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnStart').textContent = '▶ INICIAR';
+  document.getElementById('btnPause').disabled = true;
+  setStatus('idle');
+}
+
+function startTimer() {
+  if (isRunning && !isPaused) return;
+  const cfg = getConfig();
+  if (!auctionStarted) {
+    totalSeconds = cfg.min * 60 + cfg.sec;
+    currentSeconds = totalSeconds;
+    snideSeconds = cfg.snide;
+    auctionStarted = true;
+  }
+  isRunning = true; isPaused = false;
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnPause').disabled = false;
+  setStatus('live');
+
+  timerInterval = setInterval(() => {
+    if (!isSnide) {
+      currentSeconds--;
+      updateTimerDisplay(currentSeconds);
+      updateProgressBar(currentSeconds, totalSeconds);
+      updateOverlayTimer(currentSeconds);
+
+      if (currentSeconds <= 10 && currentSeconds > 5) setTimerClass('warning');
+      else if (currentSeconds <= 5 && currentSeconds > 0) setTimerClass('danger');
+      else if (currentSeconds <= 0) {
+        clearInterval(timerInterval);
+        startSnide();
+      }
+    }
+  }, 1000);
+}
+
+function pauseTimer() {
+  if (!isRunning || isSnide) return;
+  if (!isPaused) {
+    clearInterval(timerInterval);
+    isPaused = true;
+    document.getElementById('btnPause').textContent = '▶ REANUDAR';
+    document.getElementById('btnStart').disabled = false;
+    setStatus('paused');
+  }
+}
+
+function startSnide() {
+  const cfg = getConfig();
+  snideSeconds = cfg.snide;
+  isSnide = true;
+  document.getElementById('timerLabel').textContent = '⚡ SNIDE / DELAY';
+  setTimerClass('snide');
+  document.getElementById('snideOverlay').classList.add('show');
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnPause').disabled = true;
+  setStatus('snide');
+
+  snideInterval = setInterval(() => {
+    snideSeconds--;
+    updateTimerDisplay(snideSeconds);
+    updateProgressBar(snideSeconds, cfg.snide);
+    if (snideSeconds <= 0) {
+      clearInterval(snideInterval);
+      document.getElementById('snideOverlay').classList.remove('show');
+      showWinner();
+    }
+  }, 1000);
+}
+
+function addTime(secs) {
+  if (isSnide) {
+    snideSeconds += secs;
+  } else {
+    currentSeconds += secs;
+    totalSeconds += secs;
+    updateTimerDisplay(currentSeconds);
+    updateProgressBar(currentSeconds, totalSeconds);
+  }
+}
+
+function updateTimerDisplay(secs) {
+  const s = Math.max(0, secs);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  const str = `${m}:${String(r).padStart(2,'0')}`;
+  document.getElementById('timerDisplay').textContent = str;
+  document.getElementById('overlayTimer').textContent = str;
+}
+
+function updateProgressBar(current, total) {
+  const pct = total > 0 ? (current / total) * 100 : 0;
+  document.getElementById('progressBar').style.width = Math.max(0,pct) + '%';
+}
+
+function updateOverlayTimer(secs) {
+  const s = Math.max(0, secs);
+  const m = Math.floor(s/60), r = s%60;
+  document.getElementById('overlayTimer').textContent = `${m}:${String(r).padStart(2,'0')}`;
+}
+
+function setTimerClass(cls) {
+  const el = document.getElementById('timerDisplay');
+  el.className = 'timer-display' + (cls ? ' '+cls : '');
+}
+
+function setStatus(state) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'status-dot';
+  if (state==='live') { dot.classList.add('live'); txt.textContent='EN VIVO'; }
+  else if (state==='paused') { txt.textContent='PAUSADO'; }
+  else if (state==='snide') { dot.classList.add('live'); txt.textContent='SNIDE'; }
+  else { dot.classList.add('ready'); txt.textContent='Listo'; }
+}
+
+// ─── BIDS ─────────────────────────────────────────────────
+function addBid() {
+  const user = document.getElementById('inputUser').value.trim().replace('@','');
+  const tokens = parseInt(document.getElementById('inputTokens').value);
+  if (!user || !tokens || tokens < 1) {
+    flashInput();
+    return;
+  }
+  const minT = parseInt(document.getElementById('cfgMinTokens').value)||1;
+  if (tokens < minT) {
+    alert(`Mínimo ${minT} tokens para participar.`);
+    return;
+  }
+
+  // Check if user exists
+  const existing = bids.findIndex(b => b.user.toLowerCase() === user.toLowerCase());
+  if (existing >= 0) {
+    bids[existing].tokens += tokens;
+  } else {
+    bids.push({ user, tokens, color: getColor(bids.length), time: new Date().toLocaleTimeString() });
+  }
+
+  bids.sort((a,b) => b.tokens - a.tokens);
+  renderBids();
+  updateStats();
+  updateTopBidder();
+
+  document.getElementById('inputUser').value = '';
+  document.getElementById('inputTokens').value = '';
+  document.getElementById('inputUser').focus();
+
+  // Ring animation
+  document.getElementById('timerDisplay').classList.add('ring-effect');
+  setTimeout(()=>document.getElementById('timerDisplay').classList.remove('ring-effect'),400);
+}
+
+function clearBids() {
+  if (!confirm('¿Eliminar todas las pujas?')) return;
+  bids = [];
+  renderBids();
+  updateStats();
+  updateTopBidder();
+}
+
+function renderBids() {
+  const list = document.getElementById('bidsList');
+  const showTokens = document.getElementById('cfgShowTokens').checked;
+  const allowTies = document.getElementById('cfgTies').checked;
+
+  if (bids.length === 0) {
+    list.innerHTML = '<li style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Sin pujas aún. ¡Inicia la subasta!</li>';
+    document.getElementById('liveCount').textContent = '0 participantes';
+    return;
+  }
+
+  let ranked = [...bids];
+  if (!allowTies && ranked.length > 1) {
+    // Only show one winner (first)
+    ranked = [ranked[0]];
+  }
+
+  list.innerHTML = ranked.map((b, i) => `
+    <li class="bid-item">
+      <span class="bid-rank">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</span>
+      <div class="bid-avatar" style="background:${b.color}15;color:${b.color};border:1.5px solid ${b.color}40">${initials(b.user)}</div>
+      <div class="bid-user">
+        <div class="bid-name">@${b.user}</div>
+        <div class="bid-time">${b.time}</div>
+      </div>
+      ${showTokens ? `<div class="bid-tokens"><span class="token-icon">🪙</span>${b.tokens.toLocaleString()}</div>` : ''}
+    </li>
+  `).join('');
+
+  document.getElementById('liveCount').textContent = `${bids.length} participante${bids.length!==1?'s':''}`;
+
+  // Update overlay leader
+  const leader = bids[0];
+  document.getElementById('overlayName').textContent = '@'+leader.user;
+  if (showTokens) document.getElementById('overlayCoins').textContent = '🪙 '+leader.tokens.toLocaleString();
+}
+
+function updateStats() {
+  const total = bids.reduce((s,b)=>s+b.tokens,0);
+  const avg = bids.length ? Math.round(total/bids.length) : 0;
+  const max = bids.length ? Math.max(...bids.map(b=>b.tokens)) : 0;
+  document.getElementById('statParticipants').textContent = bids.length;
+  document.getElementById('statTotal').textContent = total.toLocaleString();
+  document.getElementById('statAvg').textContent = avg.toLocaleString();
+  document.getElementById('statHighest').textContent = max.toLocaleString();
+}
+
+function updateTopBidder() {
+  if (bids.length === 0) {
+    document.getElementById('topBidderName').textContent = '—';
+    document.getElementById('topBidderTokens').textContent = '🪙 0 tokens';
+    document.getElementById('overlayName').textContent = '—';
+    document.getElementById('overlayCoins').textContent = '🪙 0';
+    return;
+  }
+  const top = bids[0];
+  document.getElementById('topBidderName').textContent = '@'+top.user;
+  document.getElementById('topBidderTokens').textContent = '🪙 '+top.tokens.toLocaleString()+' tokens';
+}
+
+function flashInput() {
+  const inp = document.getElementById('inputUser');
+  inp.style.borderColor = 'var(--accent)';
+  setTimeout(()=>inp.style.borderColor='',600);
+}
+
+// ─── WINNER ───────────────────────────────────────────────
+function showWinner() {
+  const modal = document.getElementById('winnerModal');
+  if (bids.length === 0) {
+    modal.classList.add('show');
+    document.getElementById('winnerName').textContent = 'Sin participantes';
+    document.getElementById('winnerTokens').textContent = '';
+    return;
+  }
+  const winner = bids[0];
+  document.getElementById('winnerName').textContent = '@'+winner.user;
+  document.getElementById('winnerTokens').textContent = '🪙 '+winner.tokens.toLocaleString()+' tokens';
+  modal.classList.add('show');
+  spawnConfetti();
+}
+
+function closeWinner() {
+  document.getElementById('winnerModal').classList.remove('show');
+  bids = [];
+  renderBids();
+  updateStats();
+  updateTopBidder();
+  resetTimer();
+}
+
+function closeWinnerOnly() {
+  document.getElementById('winnerModal').classList.remove('show');
+}
+
+function spawnConfetti() {
+  const c = document.getElementById('confettiContainer');
+  c.innerHTML = '';
+  const cols = ['#ffd700','#fe2c55','#25f4ee','#a855f7','#22c55e','#f97316'];
+  for (let i=0; i<60; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random()*100+'%';
+    p.style.background = cols[Math.floor(Math.random()*cols.length)];
+    p.style.animationDuration = (1.5+Math.random()*2)+'s';
+    p.style.animationDelay = (Math.random()*1)+'s';
+    p.style.borderRadius = Math.random()>0.5?'50%':'2px';
+    p.style.width = p.style.height = (5+Math.random()*8)+'px';
+    c.appendChild(p);
+  }
+}
+
+// ─── OVERLAY COLOR ────────────────────────────────────────
+function updateOverlayColor(val) {
+  document.documentElement.style.setProperty('--overlay-color', val);
+  document.getElementById('colorHex').textContent = val;
+}
+
+// ─── OVERLAY WINDOW ───────────────────────────────────────
+function openOverlayWindow() {
+  const leader = bids[0] || { user: '—', tokens: 0 };
+  const showTok = document.getElementById('cfgShowTokens').checked;
+  const color = document.getElementById('cfgOverlayColor').value;
+  const overlayHTML = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:transparent;font-family:'Bebas Neue',sans-serif}
+.wrap{background:${color};padding:12px 20px;display:flex;align-items:center;justify-content:space-between;min-width:320px;border-radius:0 0 12px 12px}
+.left .lbl{font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.7);font-family:'JetBrains Mono',monospace;font-weight:700}
+.left .time{font-size:48px;color:white;line-height:1;letter-spacing:2px}
+.right{text-align:right}
+.right .lbl{font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.7);font-family:'JetBrains Mono',monospace;font-weight:700}
+.right .name{font-size:26px;color:white;letter-spacing:1px}
+.right .coins{font-size:15px;color:rgba(255,255,255,.85);font-family:'JetBrains Mono',monospace;font-weight:700}
+</style></head>
+<body>
+<div class="wrap">
+<div class="left"><div class="lbl">⏱ TIEMPO</div><div class="time" id="t">${document.getElementById('timerDisplay').textContent}</div></div>
+<div class="right"><div class="lbl">🏆 LÍDER</div><div class="name">@${leader.user}</div>${showTok?`<div class="coins">🪙 ${leader.tokens}</div>`:''}</div>
+</div>
+<script>
+  setInterval(()=>{
+    // Sync from opener
+    try { document.getElementById('t').textContent = window.opener.document.getElementById('timerDisplay').textContent; } catch(e){}
+  },500);
+<\/script>
+</body></html>`;
+
+  const w = window.open('','_blank','width=420,height=100,toolbar=no,scrollbars=no,resizable=yes');
+  w.document.write(overlayHTML);
+  w.document.close();
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+document.getElementById('inputTokens').addEventListener('keydown', e => { if(e.key==='Enter') addBid(); });
+document.getElementById('inputUser').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('inputTokens').focus(); });
+
+resetTimer();
+setStatus('ready');
+</script>
+</body>
+</html>
